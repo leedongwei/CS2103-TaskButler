@@ -1,0 +1,12 @@
+normalþþ ŒŒMeeting with Prof Limþþ ŒŒ0þþ ŒŒ1386910800000þþ ŒŒ1386914400000
+normalþþ ŒŒSports Club Meetingþþ ŒŒ0þþ ŒŒ1387591200000þþ ŒŒ1387616400000
+normalþþ ŒŒSponsorship meetingþþ ŒŒ0þþ ŒŒ1385859600000þþ ŒŒ1385863200000
+normalþþ ŒŒNew Year Eve Midnight Party, Planning Meeting with Kennyþþ ŒŒ0þþ ŒŒ1388408400000þþ ŒŒ1388412000000
+normalþþ ŒŒMeeting with Prof Tanþþ ŒŒ0þþ ŒŒ1387522800000þþ ŒŒ1387526400000
+normalþþ ŒŒCS2106 meetingþþ ŒŒ0þþ ŒŒ1384790400000þþ ŒŒ1384876800000
+deadlineþþ ŒŒVisa applicationþþ ŒŒ0þþ ŒŒnullþþ ŒŒ1384703940000
+normalþþ ŒŒRun with Kennethþþ ŒŒ0þþ ŒŒ1384520400000þþ ŒŒ1384524000000
+normalþþ ŒŒCCA Meetingþþ ŒŒ0þþ ŒŒ1384749000000þþ ŒŒ1384767000000
+deadlineþþ ŒŒSubmit lab reportþþ ŒŒ1þþ ŒŒnullþþ ŒŒ1384513200000
+floatingþþ ŒŒWatch GoTþþ ŒŒ0þþ ŒŒnullþþ ŒŒnull
+deadlineþþ ŒŒFinish CS2106 P2þþ ŒŒ0þþ ŒŒnullþþ ŒŒ1384531140000

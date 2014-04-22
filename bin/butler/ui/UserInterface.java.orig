@@ -1,0 +1,687 @@
+package butler.ui;
+
+import java.util.logging.Logger;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+
+
+import java.awt.Rectangle;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowFocusListener;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListModel;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import net.java.balloontip.BalloonTip;
+
+import butler.logic.DisplayState.DisplayListType;
+import butler.logic.DisplayStateEvent;
+import butler.logic.DisplayStateListener;
+import butler.logic.Logic;
+import butler.logic.Task;
+import butler.logic.TimeSpanFactory;
+import butler.logic.command.Action;
+import butler.logic.command.Result;
+
+public class UserInterface implements DisplayStateListener
+{
+
+	private JFrame frame;
+	private JTextField textField;
+
+	private int deadlinePage = 1;
+	private int normalTaskPage = 1;
+	private int floatingPage = 1;
+	private int charPerLine = 25;
+
+	private List<Task> deadlineTasks;
+	private List<Task> normalTasks;
+	private  List<Task> floatingTasks;
+
+	//private JTextPane txtpnFloating;
+	JList <String> floatingList = new JList <String>();
+	JList <String> deadlineList = new JList <String>();
+	JList <String> normalList = new JList <String>();
+
+
+	private JLabel lblFeedback = new JLabel(" ");
+	private JLabel lblDeadlinePage = new JLabel(" ");
+	private JLabel lblNormalTaskPage = new JLabel(" ");
+	private JLabel lblFloatingPage = new JLabel(" ");
+
+	private static Logger theLogger = Logger.getLogger(UserInterface.class.getName());
+	private Logic logic;
+
+	BalloonTip floatingBalloonTip =  new BalloonTip(floatingList, "");
+	BalloonTip deadlineBalloonTip =  new BalloonTip(deadlineList, "");
+	BalloonTip normalBalloonTip =  new BalloonTip(normalList, "");
+
+	/**
+	 * Create the application.
+	 */
+	public UserInterface(Logic logic) {
+
+		this.logic = logic;
+		logic.addDisplayStateListener(this);
+		theLogger.info( "Added Display State Listener");
+		System.err.println();
+		initialize();
+		theLogger.info("Initialized User Interface");
+		logic.listTasks(TimeSpanFactory.createDaySpan(new Date()));
+	}
+
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize()
+	{
+
+		deadlineTasks = new ArrayList<Task>();
+		floatingTasks = new ArrayList<Task>();
+		normalTasks = new ArrayList<Task>();
+
+		normalBalloonTip.setVisible(false);
+		deadlineBalloonTip.setVisible(false);
+		floatingBalloonTip.setVisible(false);
+		//floatingList.setCellRenderer( new MyListRenderer() );  
+
+		frame = new JFrame("Task Butler");
+
+		frame.addWindowFocusListener(new WindowFocusListener() {
+			public void windowGainedFocus(WindowEvent arg0) {
+
+				textField.requestFocusInWindow();
+			}
+			public void windowLostFocus(WindowEvent arg0) {
+			}
+		}
+				);
+
+		frame.setBounds(100, 100, 450, 400);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		//setting to bottom right corner of screen
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
+		Rectangle rect = defaultScreen.getDefaultConfiguration().getBounds();
+		int x = (int) rect.getMaxX() - frame.getWidth();
+		int y = (int) rect.getMaxY() - frame.getHeight() - 45;
+		frame.setLocation(x, y);
+
+
+		deadlineList.addFocusListener(new FocusAdapter() {
+
+			@Override
+			public void focusGained(FocusEvent arg0) {
+				deadlineList.clearSelection();
+				deadlineBalloonTip.setVisible(false);
+				deadlineList.setBorder(BorderFactory.createLineBorder(Color.CYAN, 4));
+			}
+			@Override
+			public void focusLost(FocusEvent arg0) {
+				deadlineList.clearSelection();
+				deadlineBalloonTip.setVisible(false);
+				deadlineList.setBorder(BorderFactory.createEmptyBorder());
+
+			}
+		});
+
+		deadlineList.addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent arg0) {
+				if (!arg0.getValueIsAdjusting() && deadlineList.getSelectedIndex() != -1 ) {
+					deadlineBalloonTip.setVisible(false);
+				}
+			}
+		});
+
+		lblFeedback.setBounds(22, 305, 200, 20);
+		frame.getContentPane().add(lblFeedback);
+
+		lblFeedback.setForeground(Color.red);
+		lblFeedback.setFont(new Font("Papyrus", Font.ITALIC, 12));
+
+		lblDeadlinePage.setBounds(220, 10, 200, 14);
+		frame.getContentPane().add(lblDeadlinePage);
+
+		lblFloatingPage.setBounds(220, 160, 200, 14);
+		frame.getContentPane().add(lblFloatingPage);
+
+		//txtpnFloating = new JTextPane();
+
+		floatingList.addFocusListener(new FocusAdapter() {
+
+			@Override
+			public void focusGained(FocusEvent arg0) {
+				floatingList.clearSelection();
+				floatingBalloonTip.setVisible(false);
+				floatingList.setBorder(BorderFactory.createLineBorder(Color.CYAN, 4));
+			}
+			@Override
+			public void focusLost(FocusEvent arg0) {
+				floatingList.clearSelection();
+				floatingBalloonTip.setVisible(false);
+				floatingList.setBorder(BorderFactory.createEmptyBorder());
+			}
+		});
+
+		floatingList.addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent arg0) {
+				if (!arg0.getValueIsAdjusting() && floatingList.getSelectedIndex() != -1 ) {
+					floatingBalloonTip.setVisible(false);
+				}
+			}
+		});
+
+		floatingList.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+
+				int floatingTaskSize = floatingTasks.size() % 6;
+
+				if (floatingTaskSize != 0) {
+					floatingTaskSize = floatingTasks.size() / 6 + 1;
+				} else {
+					floatingTaskSize = floatingTasks.size() / 6;
+				}
+
+				if(e.getKeyCode() == KeyEvent.VK_LEFT ){
+					if (--floatingPage > 0 && floatingPage <= floatingTaskSize){
+						floatingBalloonTip.setVisible(false);
+						lblFloatingPage.setText("Floating Tasks Page: " + floatingPage + " of " + floatingTaskSize );
+
+						populateTxtPnFloating();
+
+					}else{
+						++floatingPage;
+					}
+				} 
+
+				else if (e.getKeyCode() == KeyEvent.VK_RIGHT ){
+					if (++floatingPage <= floatingTaskSize){
+						floatingBalloonTip.setVisible(false);
+						lblFloatingPage.setText("Floating Tasks Page: " + floatingPage + " of " + floatingTaskSize);
+
+						populateTxtPnFloating();
+
+					}else{
+						--floatingPage;
+					}
+
+				}else if (e.getKeyCode() == KeyEvent.VK_ENTER && floatingList.getSelectedIndex() != -1){
+
+					int index = floatingList.getSelectedIndex() + (floatingPage - 1) * 6;
+
+					floatingBalloonTip.setCloseButton(null);
+
+					String taskContent = "";
+
+					StringTokenizer taskStrTokenizer = new StringTokenizer(floatingTasks.get(index).getName());
+					int requiredLength = 30;
+					int increment = 30;
+
+					while (taskContent.length() < requiredLength && taskStrTokenizer.hasMoreTokens() != false){
+
+						String token = taskStrTokenizer.nextToken();
+						if ((taskContent.concat(token).length()) < requiredLength || taskContent.length() == 0 ){
+							taskContent = taskContent.concat(token + " ");
+						}else{
+							taskContent =  taskContent.concat("<br>"  + token + " ");
+							requiredLength += increment;
+						}
+					}
+
+					floatingBalloonTip.setPadding(5);
+					floatingBalloonTip.setTextContents("<html> " + taskContent + "</html>");
+					floatingBalloonTip.setVisible(true);
+				}
+			}
+		});
+
+		deadlineList.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+
+
+				int deadlineTaskSize = deadlineTasks.size() % 6;
+
+				if (deadlineTaskSize != 0) {
+					deadlineTaskSize = deadlineTasks.size() / 6 + 1;
+				} else {
+					deadlineTaskSize = deadlineTasks.size() / 6;
+				}
+
+				if(e.getKeyCode() == KeyEvent.VK_LEFT ){
+
+					if (--deadlinePage > 0 && deadlinePage <= deadlineTaskSize){
+						deadlineBalloonTip.setVisible(false);
+						lblDeadlinePage.setText("Deadline Tasks Page: " + deadlinePage + " of " + deadlineTaskSize );
+						populateTxtPnDeadline();
+
+					}else{
+						++deadlinePage;
+					}
+				} 
+
+				else if (e.getKeyCode() == KeyEvent.VK_RIGHT ){
+					if (++deadlinePage <= deadlineTaskSize){
+						deadlineBalloonTip.setVisible(false);
+						lblDeadlinePage.setText("Deadline Tasks Page: " + deadlinePage + " of " + deadlineTaskSize);
+
+						populateTxtPnDeadline();
+
+					}else{
+						--deadlinePage;
+					}
+
+				}else if (e.getKeyCode() == KeyEvent.VK_ENTER && deadlineList.getSelectedIndex() != -1){
+
+					int index = deadlineList.getSelectedIndex() + (deadlinePage - 1) * 6;
+
+					deadlineBalloonTip.setCloseButton(null);
+
+					String taskContent = "";
+
+					StringTokenizer taskStrTokenizer = new StringTokenizer(deadlineTasks.get(index).getName());
+					int requiredLength = 30;
+					int increment = 30;
+
+					while (taskContent.length() < requiredLength && taskStrTokenizer.hasMoreTokens() != false){
+
+						String token = taskStrTokenizer.nextToken();
+						if ((taskContent.concat(token).length()) < requiredLength || taskContent.length() == 0 ){
+							taskContent = taskContent.concat(token + " ");
+						}else{
+							taskContent =  taskContent.concat("<br>"  + token + " ");
+							requiredLength += increment;
+						}
+					}
+
+					deadlineBalloonTip.setPadding(5);
+					deadlineBalloonTip.setTextContents("<html> " + taskContent + "</html>");
+					deadlineBalloonTip.setVisible(true);
+				}
+			}
+		});
+
+		lblNormalTaskPage.setBounds(16, 10, 200, 14);
+		frame.getContentPane().add(lblNormalTaskPage);
+
+		//populateTxtPnNormal();
+
+		normalList.addFocusListener(new FocusAdapter() {
+
+			@Override
+			public void focusGained(FocusEvent arg0) {
+				normalList.clearSelection();
+				normalBalloonTip.setVisible(false);
+				normalList.setBorder(BorderFactory.createLineBorder(Color.CYAN, 4));
+			}
+			@Override
+			public void focusLost(FocusEvent arg0) {
+				normalList.clearSelection();
+				normalBalloonTip.setVisible(false);
+				normalList.setBorder(BorderFactory.createEmptyBorder());
+
+			}
+		});
+
+		normalList.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				
+				int normalTaskSize = normalTasks.size() % 10;
+
+				if (normalTaskSize != 0) {
+					normalTaskSize = normalTasks.size() / 10 + 1;
+				} else {
+					normalTaskSize = normalTasks.size() / 10;
+				}
+
+				if(e.getKeyCode() == KeyEvent.VK_LEFT ){
+					if (--normalTaskPage > 0 && normalTaskPage <= normalTaskSize){
+						normalBalloonTip.setVisible(false);
+						lblNormalTaskPage.setText("Normal Tasks Page: " + normalTaskPage + " of " + normalTaskSize );
+
+						populateTxtPnNormal();
+
+					}else{
+						++normalTaskPage;
+					}
+				} 
+
+				else if (e.getKeyCode() == KeyEvent.VK_RIGHT ){
+					if (++normalTaskPage <= normalTaskSize){
+						normalBalloonTip.setVisible(false);
+						lblNormalTaskPage.setText("Normal Tasks Page: " + normalTaskPage + " of " + normalTaskSize);
+
+						populateTxtPnNormal();
+
+					}else{
+						--normalTaskPage;
+					}
+
+				}else if (e.getKeyCode() == KeyEvent.VK_ENTER && normalList.getSelectedIndex() != -1){
+
+					int index = normalList.getSelectedIndex() + (normalTaskPage - 1) * 10;
+
+					normalBalloonTip.setCloseButton(null);
+
+					String taskContent = "";
+
+					StringTokenizer taskStrTokenizer = new StringTokenizer(normalTasks.get(index).getName());
+					int requiredLength = 30;
+					int increment = 30;
+
+					while (taskContent.length() < requiredLength && taskStrTokenizer.hasMoreTokens() != false){
+
+						String token = taskStrTokenizer.nextToken();
+						if ((taskContent.concat(token).length()) < requiredLength || taskContent.length() == 0 ){
+							taskContent = taskContent.concat(token + " ");
+						}else{
+							taskContent =  taskContent.concat("<br>"  + token + " ");
+							requiredLength += increment;
+						}
+					}
+
+					normalBalloonTip.setPadding(5);
+					normalBalloonTip.setTextContents("<html> " + taskContent + "</html>");
+					normalBalloonTip.setLocation(110, 20);
+					normalBalloonTip.setVisible(true);
+}
+			}
+		});
+
+		normalList.addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent arg0) {
+				if (!arg0.getValueIsAdjusting() && normalList.getSelectedIndex() != -1 ) {
+					normalBalloonTip.setVisible(false);
+				}
+			}
+		});
+
+		//		frame.getContentPane().add(txtpnMainTask);
+
+		textField = new JTextField();
+		TextFieldLengthChecker textFieldLengthChecker = new TextFieldLengthChecker();
+		textField.setDocument(textFieldLengthChecker);
+		textField.setBounds(22, 330, 400, 20);
+
+		textField.addKeyListener(new KeyAdapter() {
+
+			@Override
+			public void keyPressed(KeyEvent arg0) {
+
+				if (arg0.getKeyCode() == KeyEvent.VK_ENTER){
+
+					lblFeedback.setText("");
+
+					Result result = logic.executeCommand(textField.getText());
+
+					if (result.getActionPerformed() == Action.ADD){
+						lblFeedback.setText(result.getFirstResult().getName() + " is added");
+					}else if (result.getActionPerformed() == Action.DELETE){
+						lblFeedback.setText(result.getFirstResult().getName() + " is deleted");
+					}else if (result.getActionPerformed() == Action.LIST && 
+
+							result.getResults().size() == 0){
+						lblFeedback.setText("There is nothing available");
+					}else if (textField.getText().equalsIgnoreCase("exit")){
+
+					}
+
+					textField.setText("");
+				}
+
+			}
+		});
+
+		frame.getContentPane().add(textField);
+		frame.getContentPane().setLayout(null);
+
+		JScrollPane floatingListPane = new JScrollPane(floatingList); 
+		floatingListPane.setBounds(220, 180, 200, 120);
+		floatingListPane.setHorizontalScrollBar(null);
+		frame.getContentPane().add(floatingListPane);
+
+		JScrollPane deadlineListPane = new JScrollPane(deadlineList); 
+		deadlineListPane.setBounds(220, 34, 200, 120);
+		deadlineListPane.setHorizontalScrollBar(null);
+		frame.getContentPane().add(deadlineListPane);
+
+		JScrollPane normalListPane = new JScrollPane(normalList); 
+		normalListPane.setBounds(16, 34, 200, 266);
+		normalListPane.setHorizontalScrollBar(null);
+		frame.getContentPane().add(normalListPane);
+		
+		frame.getContentPane().add(normalBalloonTip);
+		frame.getContentPane().add(deadlineBalloonTip);
+		frame.getContentPane().add(floatingBalloonTip);
+
+	}
+
+	public void show(boolean b){
+		frame.setVisible(b);
+	}
+
+	private void populateTxtPnFloating() {
+
+		DefaultListModel<String> floatingModel = new DefaultListModel<String>();
+
+		if (floatingTasks.size() > 0){
+
+			floatingPage--;
+
+			try{
+				for (int i = floatingPage * 6 ; i < (floatingPage + 1) * 6 ; i++){
+
+					if (floatingTasks.get(i).getName().length() < charPerLine){
+						floatingModel.addElement("F" + (i+1) + ". " + floatingTasks.get(i).getName());
+
+
+					} else {
+						floatingModel.addElement("F" + (i+1) + ". " + floatingTasks.get(i).getName().substring(0, charPerLine)
+								+ "...");
+					}
+				}
+			}catch(Exception e){
+
+			}
+
+			floatingList.setModel(floatingModel);     
+			floatingPage++;
+		}
+
+		//txtpnFloating.setText(content);
+	}
+
+	private void populateTxtPnNormal() {
+
+		DefaultListModel<String> normalModel = new DefaultListModel<String>();
+
+
+		if (normalTasks.size() > 0){
+			normalTaskPage--;
+
+			try{
+				for (int i = normalTaskPage * 10 ; i < (normalTaskPage + 1) * 10 ; i++){
+
+					if (normalTasks.get(i).isFullDay()) {
+						
+						String task = "T" + (i+1) + ". " + normalTasks.get(i).getName() + " (whole day) ";
+						
+						
+						if (task.length() < charPerLine){
+							normalModel.addElement("T" + (i+1) + ". " + normalTasks.get(i).getName() + " (whole day) ");	
+						}else{
+							normalModel.addElement(task.substring(0, charPerLine) + "...");	
+								
+						}
+		
+					} else {
+
+						SimpleDateFormat format = new SimpleDateFormat(
+								"EEE MMM dd hh:mm yyyy");
+						
+						String task = "T" + (i+1) + ". " + normalTasks.get(i).getName() + " starting from "
+								+ format.format(normalTasks.get(i).getStartTime()) + " to " + 
+								format.format(normalTasks.get(i).getEndTime());
+						
+						if (task.length() < charPerLine){
+							normalModel.addElement("T" + (i+1) + ". " + normalTasks.get(i).getName() + " (whole day) ");	
+						}else{
+							normalModel.addElement(task.substring(0, charPerLine) + "...");	
+								
+						}
+					}
+				}
+			}catch(Exception e){
+
+			}
+			normalList.setModel(normalModel); 
+			normalTaskPage++;
+		}
+
+		//txtpnMainTask.setText(content);
+	}
+
+
+	@SuppressWarnings("deprecation")
+	private void populateTxtPnDeadline() {
+
+		DefaultListModel<String> deadlineModel = new DefaultListModel<String>();
+
+		if (deadlineTasks.size() > 0){
+			deadlinePage--;
+
+			try{
+
+				for (int i = deadlinePage * 6 ; i < (deadlinePage + 1) * 6 ; i++){
+
+					SimpleDateFormat format = new SimpleDateFormat(
+							"EEE MMM dd hh:mm yyyy");	
+
+					//if (deadlineTasks.get(i).getEndTime() == null){
+					String task  = "D" + (i+1) + ". " + deadlineTasks.get(i).getName()+
+							" by " +  format.format(deadlineTasks.get(i).getEndTime());
+
+					if (task.length() < charPerLine){
+						deadlineModel.addElement(task);
+					} else {
+						deadlineModel.addElement(task.substring(0, charPerLine)+ "...");
+					}
+				}
+			}catch(Exception e){
+
+			}
+			deadlineList.setModel(deadlineModel); 
+			deadlinePage++;
+		}
+
+		//txtpnDeadline.setText(content);
+
+	}
+
+
+	@Override
+	public void stateChanged(DisplayStateEvent evt) {
+
+		if (evt.getListChanged() == DisplayListType.DEADLINE){
+
+			deadlinePage = 1;
+
+			deadlineTasks = evt.getDisplayList();
+
+			if (deadlineTasks.size() == 0){
+				lblDeadlinePage.setText("Deadline Tasks Page: " + 0 + " of " + 0 );
+
+			} else {
+
+				int deadLineTaskSize = deadlineTasks.size() % 6;
+
+				if (deadLineTaskSize != 0)
+					deadLineTaskSize = deadlineTasks.size() / 6 + 1;
+				else
+					deadLineTaskSize = deadlineTasks.size() / 6;
+
+				lblDeadlinePage.setText("Deadline Tasks Page: " + 1 + " of " + deadLineTaskSize );
+
+			} 
+
+			populateTxtPnDeadline();
+
+
+		} else if (evt.getListChanged() == DisplayListType.FLOATING){
+
+			floatingPage = 1;
+
+			floatingTasks = evt.getDisplayList();
+
+			if (floatingTasks.size() == 0){
+				lblFloatingPage.setText("Floating Tasks Page: " + 0 + " of " + 0);
+
+			} else {
+
+				int floatingTaskSize = floatingTasks.size() % 6;
+
+				if (floatingTaskSize != 0) {
+					floatingTaskSize = floatingTasks.size() / 6 + 1;
+				} else {
+					floatingTaskSize = floatingTasks.size() / 6;
+				}
+
+				lblFloatingPage.setText("Floating Tasks Page: " + 1 + " of " + floatingTaskSize);
+			}
+
+			populateTxtPnFloating();
+
+		} else {
+
+			normalTaskPage = 1;
+			normalTasks = evt.getDisplayList();
+
+			if (normalTasks.size() == 0){
+				lblNormalTaskPage.setText("Normal Tasks Page: " + 0 + " of " + 0);
+
+			} else {
+
+				int normalTaskSize = normalTasks.size() % 10;
+
+				if (normalTaskSize != 0){
+					normalTaskSize = normalTasks.size() / 10 + 1;
+				} else {
+					normalTaskSize = normalTasks.size() / 10;
+				}
+
+				lblNormalTaskPage.setText("Normal Tasks Page: " + 1 + " of " + normalTaskSize);
+			}
+
+			populateTxtPnNormal();	
+		}
+	}
+}
